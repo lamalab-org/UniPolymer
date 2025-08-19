@@ -48,7 +48,8 @@ def train_molbind(config: DictConfig):
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
     wandb_logger = L.loggers.WandbLogger(
-        project=os.getenv("WANDB_PROJECT"),
+        # project=os.getenv("WANDB_PROJECT"),
+        project="PolyBind-Neurips",
         entity=os.getenv("WANDB_ENTITY"),
         id=run_id,
     )

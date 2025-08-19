@@ -43,15 +43,9 @@ def compute_retrieval_metrics_from_query(
     successful_df = pd.DataFrame(successful_retrievals)
     failed_df = pd.DataFrame(failed_retrievals)
 
-    # Use modality pair in file names if provided, otherwise use generic names
-    if modality_1 and modality_2:
-        successful_file = f"{output_dir}/successful_retrievals_{modality_1}_{modality_2}"
-        failed_file = f"{output_dir}/failed_retrievals_{modality_1}_{modality_2}"
-    else:
-        successful_file = f"{output_dir}/successful_retrievals.csv"
-        failed_file = f"{output_dir}/failed_retrievals.csv"
+    successful_file = f"{output_dir}/successful_retrievals.csv"
+    failed_file = f"{output_dir}/failed_retrievals.csv"
 
-    # Save to CSV files
     successful_df.to_csv(successful_file, index=False)
     failed_df.to_csv(failed_file, index=False)
 
@@ -100,7 +94,7 @@ def full_database_retrieval(
     for modality in all_modalities:
         # Get indices of non-NaN rows for this modality
         valid_modality_rows = indices[modality].dropna()
-        # Map DataFrame indices to embedding array positions (0-based)
+
         embedding_indices[modality] = {df_idx: emb_idx for emb_idx, df_idx in enumerate(valid_modality_rows.index)}
 
     for modality_1 in all_modalities:

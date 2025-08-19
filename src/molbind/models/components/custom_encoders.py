@@ -56,3 +56,75 @@ class PolymerNameEncoder(BaseModalityEncoder):
         if self.freeze_encoder:
             for param in self.encoder.parameters():
                 param.requires_grad = False
+
+
+class PsmilesEncoder(BaseModalityEncoder):
+    """Encoder for Polymer SMILES (PSMILES) using PolyBERT model."""
+
+    def __init__(self, freeze_encoder: bool = False, pretrained: bool = True, **kwargs) -> None:
+        super().__init__("kuelumbus/polyBERT", freeze_encoder, pretrained, **kwargs)
+
+    def _initialize_encoder(self):
+        """Initialize the PolyBERT encoder for PSMILES."""
+        self.encoder = AutoModel.from_pretrained(self.model_name, trust_remote_code=True)
+        if self.freeze_encoder:
+            for param in self.encoder.parameters():
+                param.requires_grad = False
+
+    def forward(self, x: tuple[Tensor, Tensor]) -> Tensor:
+        """
+        Forward pass for PSMILES encoding.
+
+        Args:
+            x: Tuple of (token_ids, attention_mask)
+
+        Returns:
+            Encoded PSMILES representation
+        """
+        token_ids, attention_mask = x if len(x) == 2 else (x[0], x[1])
+        output = self.encoder(
+            input_ids=token_ids,
+            attention_mask=attention_mask,
+        )
+        # PolyBERT uses mean pooling over token dimension
+        token_embeddings = output.last_hidden_state
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
+
+class BigsmilesEncoder(BaseModalityEncoder):
+    """Encoder for BigSMILES using ChemBERTa-zinc model."""
+
+    def __init__(self, freeze_encoder: bool = False, pretrained: bool = True, **kwargs) -> None:
+        super().__init__("seyonec/ChemBERTa-zinc-base-v1", freeze_encoder, pretrained, **kwargs)
+
+    def _initialize_encoder(self):
+        """Initialize the ChemBERTa encoder for BigSMILES."""
+        self.encoder = AutoModel.from_pretrained(self.model_name, trust_remote_code=True)
+        if self.freeze_encoder:
+            for param in self.encoder.parameters():
+                param.requires_grad = False
+
+    def forward(self, x: tuple[Tensor, Tensor]) -> Tensor:
+        """
+        Forward pass for BigSMILES encoding.
+
+        Args:
+            x: Tuple of (token_ids, attention_mask)
+
+        Returns:
+            Encoded BigSMILES representation
+        """
+        token_ids, attention_mask = x if len(x) == 2 else (x[0], x[1])
+        output = self.encoder(
+            input_ids=token_ids,
+            attention_mask=attention_mask,
+        )
+        # Use pooler output if available, otherwise mean pooling
+        if hasattr(output, "pooler_output") and output.pooler_output is not None:
+            return output.pooler_output
+        else:
+            # Mean pooling as fallback
+            token_embeddings = output.last_hidden_state
+            input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+            return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
